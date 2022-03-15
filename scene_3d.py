@@ -12,12 +12,11 @@ class Scene3D:
     def __init__(self, world: PlaneWorldModel):
         """Sets up the 3D viewer"""
         self._plotter = pv.Plotter()
-        self._grid_size = world.grid_size
+        self._grid_length = world.grid_length
 
         # Add scene origin and plane.
-        width, height = world.world_size
-        half_width = 0.5 * width
-        half_height = 0.5 * height
+        half_width = 0.5 * world.world_size.width
+        half_height = 0.5 * world.world_size.height
 
         point_bottom_left = [-half_width, -half_height, 0.]
         point_bottom_right = [half_width, -half_height, 0.]
@@ -31,7 +30,7 @@ class Scene3D:
         tex = pv.numpy_to_texture(image_rgb)
 
         self._plotter.add_mesh(rectangle, texture=tex, opacity=0.9)
-        self._add_axis(SE3(), self._grid_size)
+        self._add_axis(SE3(), self._grid_length)
 
         # Add callback for closing window.
         def exit_callback():
@@ -99,7 +98,7 @@ class Scene3D:
 
         # Render new visualisation.
         self._current_camera_actors = \
-            self._add_frustum(pose_w_c, camera_model, undistorted_frame) + self._add_axis(pose_w_c, self._grid_size)
+            self._add_frustum(pose_w_c, camera_model, undistorted_frame) + self._add_axis(pose_w_c, self._grid_length)
 
     def update(self, undistorted_frame, pose_w_c: SE3, camera_model, time=10):
         self._update_current_camera_visualisation(undistorted_frame, pose_w_c, camera_model)

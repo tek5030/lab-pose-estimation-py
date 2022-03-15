@@ -4,6 +4,20 @@ from pylie import SO3, SE3
 from dataclasses import dataclass
 
 
+class Size:
+    def __init__(self, width: float, height: float):
+        self._width = width
+        self._height = height
+
+    @property
+    def width(self):
+        return self._width
+
+    @property
+    def height(self):
+        return self._height
+
+
 def homogeneous(x):
     """Transforms Cartesian column vectors to homogeneous column vectors"""
     return np.r_[x, [np.ones(x.shape[1])]]
@@ -115,8 +129,8 @@ def extract_good_ratio_matches(matches, max_ratio):
 class PlaneReference:
     def __init__(
             self,
-            image_size,
-            scene_size,
+            image_size: Size,
+            scene_size: Size,
             origin=np.array([0.0, 0.0, 0.0]),
             x_dir=np.array([1.0, 0.0, 0.0]),
             y_dir=np.array([0.0, 1.0, 0.0])
@@ -131,9 +145,9 @@ class PlaneReference:
         self._origin = np.asarray(origin)
         self._x_dir = np.asarray(x_dir)
         self._y_dir = np.asarray(y_dir)
-        # TODO: [0] og [1] x og y, shape or size
-        self._units_per_pixel_x = scene_size[1] / image_size[1]
-        self._units_per_pixel_y = scene_size[0] / image_size[0]
+
+        self._units_per_pixel_x = scene_size.width / image_size.width
+        self._units_per_pixel_y = scene_size.height / image_size.height
 
     def pixel_to_world(self, pixel):
         return self._origin \
@@ -144,17 +158,17 @@ class PlaneReference:
 class PlaneWorldModel:
     """Represents a planar world."""
 
-    def __init__(self, world_image, world_size, grid_size):
+    def __init__(self, world_image: np.array, world_size: Size, grid_length: float):
         """
         Constructs the world model.
 
         :param world_image: The world map image.
         :param world_size: The physical size of the world corresponding to the image in meters.
-        :param grid_size: Size of the grid cells in the world image in meters.
+        :param grid_length: Length of the grid cells in the world image in meters.
         """
         self._world_image = world_image
         self._world_size = world_size
-        self._grid_size = grid_size
+        self._grid_length = grid_length
         self._max_num_points = 1000
         self._max_ratio = 0.8
 
@@ -169,8 +183,8 @@ class PlaneWorldModel:
         return self._world_size
 
     @property
-    def grid_size(self):
-        return self._grid_size
+    def grid_length(self):
+        return self._grid_length
 
     def _construct_world(self):
         # Convert to gray scale.
@@ -189,24 +203,48 @@ class PlaneWorldModel:
         # Compute descriptors for each keypoint.
         keypoints, new_descriptors = self._desc_extractor.compute(gray_img, keypoints)
 
-        # Do matching step and ration test to remove bad points.
+        # Do matching step and ratio test to remove bad points.
         matches = self._matcher.knnMatch(new_descriptors, new_descriptors, k=2)
         good_matches = extract_good_ratio_matches(matches, max_ratio=self._max_ratio)
 
         # Store points and descriptors.
         ref = PlaneReference(
-            self._world_image.shape[0:2],
+            Size(*self._world_image.shape[1::-1]),
             self._world_size,
-            np.array([-0.5 * self._world_size[1], 0.5 * self._world_size[0], 0.0]),
+            np.array([-0.5 * self._world_size.width, 0.5 * self._world_size.height, 0.0]),
             np.array([1.0, 0.0, 0.0]),
             np.array([0.0, -1., 0.0]),
         )
 
-        self._world_points = []
-        self._descriptors = []
-        for match in good_matches:
-            self._world_points.append(ref.pixel_to_world(keypoints[match.queryIdx].pt))
-            self._descriptors.append(new_descriptors[match.queryIdx, :])
+        # fixme: use mask to extract points?
+        # self._world_points = ??
+        # self._descriptors = ??
+        # for match in good_matches:
+            # self._world_points.append(ref.pixel_to_world(keypoints[match.queryIdx].pt))
+            # self._descriptors.append(new_descriptors[match.queryIdx, :])
+
+    def find_correspondences(self, frame: np.ndarray):
+        # Detect keypoints
+        frame_keypoints = np.asarray(self._detector.detect(frame))
+
+        # Compute descriptors for each keypoint.
+        frame_keypoints, frame_descriptors = self._desc_extractor.compute(frame, frame_keypoints)
+
+        # fixme: use mask to extract points?
+        # Do matching step and ratio test to remove bad points.
+        # matches = self._matcher.knnMatch(frame_descriptors, self._descriptors, k=2)
+        # good_matches = extract_good_ratio_matches(matches, max_ratio=self._max_ratio)
+        #
+        # # Extract good 2d-3d matches.
+        image_points = None
+        world_points = None
+        #
+        # for match in good_matches:
+        #     image_points.append(frame_keypoints[match.queryIdx].pt)
+        #     world_points.append(self._world_points[match.trainIdx])
+
+        return image_points, world_points
+
 
 @dataclass
 class PoseEstimate:
