@@ -9,6 +9,10 @@ class Size:
         self._width = width
         self._height = height
 
+    @classmethod
+    def from_numpy_shape(cls, shape):
+        return cls(*shape[1::-1])
+
     @property
     def width(self):
         return self._width
@@ -150,9 +154,11 @@ class PlaneReference:
         self._units_per_pixel_y = scene_size.height / image_size.height
 
     def pixel_to_world(self, pixel):
-        return self._origin \
-               + (pixel[0] * self._units_per_pixel_x) * self._x_dir \
-               + (pixel[1] * self._units_per_pixel_y) * self._y_dir
+        pixel = np.atleast_2d(pixel)
+        return \
+            self._origin \
+            + np.einsum('i,j->ij', pixel[:, 0], self._x_dir) \
+            + np.einsum('i,j->ij', pixel[:, 1], self._y_dir)
 
 
 class PlaneWorldModel:
@@ -203,10 +209,6 @@ class PlaneWorldModel:
         # Compute descriptors for each keypoint.
         keypoints, new_descriptors = self._desc_extractor.compute(gray_img, keypoints)
 
-        # Do matching step and ratio test to remove bad points.
-        matches = self._matcher.knnMatch(new_descriptors, new_descriptors, k=2)
-        good_matches = extract_good_ratio_matches(matches, max_ratio=self._max_ratio)
-
         # Store points and descriptors.
         ref = PlaneReference(
             Size(*self._world_image.shape[1::-1]),
@@ -216,12 +218,9 @@ class PlaneWorldModel:
             np.array([0.0, -1., 0.0]),
         )
 
-        # fixme: use mask to extract points?
-        # self._world_points = ??
-        # self._descriptors = ??
-        # for match in good_matches:
-            # self._world_points.append(ref.pixel_to_world(keypoints[match.queryIdx].pt))
-            # self._descriptors.append(new_descriptors[match.queryIdx, :])
+        pixels = np.array([k.pt for k in keypoints])
+        self._world_points = ref.pixel_to_world(pixels)
+        self._descriptors = new_descriptors
 
     def find_correspondences(self, frame: np.ndarray):
         # Detect keypoints
