@@ -137,5 +137,70 @@ def create_world_model():
     # Create world model.
     return PlaneWorldModel(world_image, paper_size[paper_format], grid_length[paper_format])
 
+
+class HomographyPoseEstimator:
+    def __init__(self, calibration_matrix: np.ndarray):
+        self._calibration_matrix_inv = np.linalg.inv(calibration_matrix)
+
+    def estimate(self, image_points, world_points):
+        """Estimate pose from the homography computed from 2d-3d (planar) correspondences"""
+
+        # Check that we have a minimum required number of points, here 3 times the theoretic minimum.
+        min_number_points = 4
+        if len(image_points) < min_number_points:
+            return None
+
+        # Compute the homography.
+        H, inlier_mask = cv2.findHomography(world_points, image_points, cv2.RANSAC, 3)
+        inliers = inlier_mask.ravel() > 0
+
+        # Check that we have enough inliers.
+        if len(inliers) < min_number_points:
+            return None
+
+        # Extract inliers.
+        inlier_image_points = image_points[inliers]
+        inlier_world_points = world_points[inliers]
+
+        # Compute the matrix M and extract M_bar (the two first columns of M).
+        M = self._calibration_matrix_inv @ H
+        M_bar = M[:, :2]
+
+        # Perform SVD on M_bar.
+        try:
+            U, _, Vh = np.linalg.svd(M_bar, full_matrices=False)
+        except np.linalg.LinAlgError:
+            print("Warning: SVD computation did not converge")
+            return None
+
+        # Compute R_bar (the two first columns of R) from the result of the SVD.
+        R_bar = U @ Vh
+
+        # Construct R by inserting R_bar and computing the third column of R from the two first.
+        # Remember to check det(R)!
+        R = np.c_[R_bar, np.cross(R_bar[:, 0], R_bar[:, 1])]
+
+        if np.linalg.det(R) < 0:
+            R[:, 2] *= -1.
+
+        # Compute the scale factor.
+        scale = (R_bar * M_bar).sum() / (M_bar**2).sum()
+
+        # Extract the translation t.
+        t = M[:, 2] * scale
+
+        # Check that this is the correct solution by testing the last element of t.
+        if t[-1] < 0:
+            # Switch to other solution.
+            t = -t
+            R[:, :2] *= -1.
+
+        # We now have the pose of the world in the camera frame!
+        pose_c_w = SE3((SO3(R), t))
+
+        # Return the pose of the camera in the world frame.
+        return pose_c_w.inverse(), inlier_image_points, inlier_world_points
+
+
 if __name__ == "__main__":
     run_pose_estimation_lab()
