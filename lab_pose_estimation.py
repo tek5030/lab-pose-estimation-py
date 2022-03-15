@@ -4,8 +4,9 @@ import timeit
 from scene_3d import Scene3D
 from pylie import SE3, SO3
 from common_lab_utils import (
-  PerspectiveCamera, PlaneWorldModel, PoseEstimate, Size
+  PerspectiveCamera, PlaneWorldModel, Size
 )
+from pose_estimators import (PoseEstimate, PnPPoseEstimator)
 
 
 def run_pose_estimation_lab():
@@ -19,7 +20,7 @@ def run_pose_estimation_lab():
     # TODO 2-6: Implement HomographyPoseEstimator.
     # TODO 7: Implement MobaPoseEstimator by finishing CameraProjectionMeasurement.
     # Construct pose estimator.
-    pose_estimator = HomographyPoseEstimator(camera_model.calibration_matrix)
+    pose_estimator = PnPPoseEstimator(camera_model.calibration_matrix, True)
 
     # Construct AR visualizer.
     ar_example = None # fixme
@@ -65,7 +66,7 @@ def run_pose_estimation_lab():
         # Update the pose estimate.
         # Measure how long the processing takes.
         start = timeit.default_timer()
-        # fixme pose_w_c, inlier_image_points, inlier_world_points = pose_estimator.estimate(image_points, world_points)
+        estimate = pose_estimator.estimate(image_points, world_points)
         end = timeit.default_timer()
         pose_estimation_duration = end - start
 
@@ -73,14 +74,14 @@ def run_pose_estimation_lab():
         # fixme: ar_example.update(undistorted_frame, pose_estimate, camera_model.K, correspondence_matching_duration, pose_estimation_duration)
 
         # fixme: Temp. dummy estimate, move camera in a circle around the origin.
-        dummy_theta += 0.01
-        dummy_pos_world_cam = np.array([0.3 * np.cos(dummy_theta), 0.3 * np.sin(dummy_theta), .1])
-        dummy_pose = PerspectiveCamera.looks_at_pose(dummy_pos_world_cam, np.zeros([3]), np.array([0., 0., 1.]))
-        dummy_estimate = PoseEstimate(dummy_pose, None, None)
+        # dummy_theta += 0.01
+        # dummy_pos_world_cam = np.array([0.3 * np.cos(dummy_theta), 0.3 * np.sin(dummy_theta), .1])
+        # dummy_pose = PerspectiveCamera.looks_at_pose(dummy_pos_world_cam, np.zeros([3]), np.array([0., 0., 1.]))
+        # dummy_estimate = PoseEstimate(dummy_pose, None, None)
         cv2.imshow("window", undistorted_frame)
 
         # Update the windows.
-        do_exit = scene_3d.update(undistorted_frame, dummy_estimate.pose_w_c, camera_model)
+        do_exit = scene_3d.update(undistorted_frame, estimate, camera_model)
         if do_exit:
             break
         cv2.waitKey(10)
@@ -148,7 +149,7 @@ class HomographyPoseEstimator:
         # Check that we have a minimum required number of points, here 3 times the theoretic minimum.
         min_number_points = 12
         if len(image_points) < min_number_points:
-            return None
+            return PoseEstimate()
 
         # Compute the homography.
         H, inlier_mask = cv2.findHomography(world_points, image_points, cv2.RANSAC, 3)
@@ -156,7 +157,7 @@ class HomographyPoseEstimator:
 
         # Check that we have enough inliers.
         if len(inliers) < min_number_points:
-            return None
+            return PoseEstimate()
 
         # Extract inliers.
         inlier_image_points = image_points[inliers]
@@ -171,7 +172,7 @@ class HomographyPoseEstimator:
             U, _, Vh = np.linalg.svd(M_bar, full_matrices=False)
         except np.linalg.LinAlgError:
             print("Warning: SVD computation did not converge")
-            return None
+            return PoseEstimate()
 
         # Compute R_bar (the two first columns of R) from the result of the SVD.
         R_bar = U @ Vh
@@ -199,7 +200,7 @@ class HomographyPoseEstimator:
         pose_c_w = SE3((SO3(R), t))
 
         # Return the pose of the camera in the world frame.
-        return pose_c_w.inverse(), inlier_image_points, inlier_world_points
+        return PoseEstimate(pose_c_w.inverse(), inlier_image_points, inlier_world_points)
 
 
 if __name__ == "__main__":

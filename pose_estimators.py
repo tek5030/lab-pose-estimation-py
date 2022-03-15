@@ -1,6 +1,18 @@
 import numpy as np
 import cv2
 from pylie import SO3, SE3
+from dataclasses import dataclass
+
+
+@dataclass
+class PoseEstimate:
+    """3D-2D pose estimation results"""
+    pose_w_c : SE3 = None
+    image_inlier_points: np.ndarray = None
+    world_inlier_points: np.ndarray = None
+
+    def is_found(self):
+        return self.pose_w_c is not None
 
 
 class PnPPoseEstimator:
@@ -14,20 +26,20 @@ class PnPPoseEstimator:
         # Check that we have a minimum required number of points, here 3 times the theoretic minimum.
         min_number_points = 9
         if len(image_points) < min_number_points:
-            return None
+            return PoseEstimate()
 
         # Find inliers and compute initial pose with RANSAC.
         retval, rvec, tvec, inliers = cv2.solvePnPRansac(world_points, image_points, self._calibration_matrix, (),
                                                          useExtrinsicGuess=False, iterationsCount=10000,
                                                          reprojectionError=2.0, confidence=0.99,
                                                          flags=cv2.SOLVEPNP_AP3P)
-        inliers = inliers.ravel()
 
         # Check that we have enough inliers.
         if not retval or len(inliers) < min_number_points:
-            return None
+            return PoseEstimate()
 
         # Extract inliers.
+        inliers = inliers.ravel()
         inlier_image_points = image_points[inliers]
         inlier_world_points = world_points[inliers]
 
@@ -42,4 +54,4 @@ class PnPPoseEstimator:
         pose_c_w = SE3((SO3.Exp(rvec), tvec))
 
         # Return the pose of the camera in the world frame.
-        return pose_c_w.inverse(), inlier_image_points, inlier_world_points
+        return PoseEstimate(pose_c_w.inverse(), inlier_image_points, inlier_world_points)

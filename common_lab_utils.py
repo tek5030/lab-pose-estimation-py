@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 from pylie import SO3, SE3
-from dataclasses import dataclass
 
 
 class Size:
@@ -242,19 +241,3 @@ class PlaneWorldModel:
         world_points = self._world_points[world_descriptor_idx]
 
         return image_points, world_points
-
-
-@dataclass
-class PoseEstimate:
-    """3D-2D pose estimation results"""
-    pose_w_c : SE3
-    image_inlier_points: list  # FIXME: 2D inlier points
-    world_inlier_points: list  # FIXME: 3D inlier points
-
-    def is_found(self):
-        # Default identity orientation means looking away,
-        # therefore using default values when no valid estimate was found.
-        return False  # FIXME !pose_W_C.rotationMatrix().isIdentity(1e-8);
-
-# class PoseEstimator:
-#

@@ -2,6 +2,7 @@ import numpy as np
 import pyvista as pv
 from pylie import SE3
 from common_lab_utils import PlaneWorldModel
+from pose_estimators import PoseEstimate
 
 class Scene3D:
     """Visualises the lab in 3D"""
@@ -91,17 +92,20 @@ class Scene3D:
         )
         return frustum_actors
 
-    def _update_current_camera_visualisation(self, undistorted_frame, pose_w_c: SE3, camera_model):
+    def _update_current_camera_visualisation(self, undistorted_frame, estimate: PoseEstimate, camera_model):
         # Remove old visualisation.
         for actor in self._current_camera_actors:
             self._plotter.remove_actor(actor, render=False)
 
         # Render new visualisation.
-        self._current_camera_actors = \
-            self._add_frustum(pose_w_c, camera_model, undistorted_frame) + self._add_axis(pose_w_c, self._grid_length)
+        if estimate.is_found():
+            print(estimate.pose_w_c)
+            self._current_camera_actors = \
+                self._add_frustum(estimate.pose_w_c, camera_model, undistorted_frame) + \
+                self._add_axis(estimate.pose_w_c, self._grid_length)
 
-    def update(self, undistorted_frame, pose_w_c: SE3, camera_model, time=10):
-        self._update_current_camera_visualisation(undistorted_frame, pose_w_c, camera_model)
+    def update(self, undistorted_frame, estimate: PoseEstimate, camera_model, time=10):
+        self._update_current_camera_visualisation(undistorted_frame, estimate, camera_model)
         self._plotter.update(time)
         return self._do_exit
 
