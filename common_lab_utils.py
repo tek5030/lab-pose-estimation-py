@@ -224,23 +224,22 @@ class PlaneWorldModel:
 
     def find_correspondences(self, frame: np.ndarray):
         # Detect keypoints
-        frame_keypoints = np.asarray(self._detector.detect(frame))
+        frame_keypoints = self._detector.detect(frame)
 
         # Compute descriptors for each keypoint.
         frame_keypoints, frame_descriptors = self._desc_extractor.compute(frame, frame_keypoints)
 
         # fixme: use mask to extract points?
         # Do matching step and ratio test to remove bad points.
-        # matches = self._matcher.knnMatch(frame_descriptors, self._descriptors, k=2)
-        # good_matches = extract_good_ratio_matches(matches, max_ratio=self._max_ratio)
-        #
+        matches = self._matcher.knnMatch(frame_descriptors, self._descriptors, k=2)
+        good_matches = extract_good_ratio_matches(matches, max_ratio=self._max_ratio)
+
+        frame_idx = [m.queryIdx for m in good_matches]
+        world_descriptor_idx = [m.trainIdx for m in good_matches]
+
         # # Extract good 2d-3d matches.
-        image_points = None
-        world_points = None
-        #
-        # for match in good_matches:
-        #     image_points.append(frame_keypoints[match.queryIdx].pt)
-        #     world_points.append(self._world_points[match.trainIdx])
+        image_points = [k.pt for k in np.asarray(frame_keypoints)[frame_idx]]
+        world_points = self._world_points[world_descriptor_idx]
 
         return image_points, world_points
 
