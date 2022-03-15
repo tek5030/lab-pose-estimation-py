@@ -19,7 +19,7 @@ def run_pose_estimation_lab():
     # TODO 2-6: Implement HomographyPoseEstimator.
     # TODO 7: Implement MobaPoseEstimator by finishing CameraProjectionMeasurement.
     # Construct pose estimator.
-    pose_estimator = None # fixme
+    pose_estimator = HomographyPoseEstimator(camera_model.calibration_matrix)
 
     # Construct AR visualizer.
     ar_example = None # fixme
@@ -65,7 +65,7 @@ def run_pose_estimation_lab():
         # Update the pose estimate.
         # Measure how long the processing takes.
         start = timeit.default_timer()
-        # fixme: pose_estimate = pose_estimator.estimate(matched_image_points, matched_world_points)
+        # fixme pose_w_c, inlier_image_points, inlier_world_points = pose_estimator.estimate(image_points, world_points)
         end = timeit.default_timer()
         pose_estimation_duration = end - start
 
@@ -146,7 +146,7 @@ class HomographyPoseEstimator:
         """Estimate pose from the homography computed from 2d-3d (planar) correspondences"""
 
         # Check that we have a minimum required number of points, here 3 times the theoretic minimum.
-        min_number_points = 4
+        min_number_points = 12
         if len(image_points) < min_number_points:
             return None
 
