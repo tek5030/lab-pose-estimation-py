@@ -238,7 +238,7 @@ class PlaneWorldModel:
         world_descriptor_idx = [m.trainIdx for m in good_matches]
 
         # # Extract good 2d-3d matches.
-        image_points = [k.pt for k in np.asarray(frame_keypoints)[frame_idx]]
+        image_points = np.array([k.pt for k in np.asarray(frame_keypoints)[frame_idx]])
         world_points = self._world_points[world_descriptor_idx]
 
         return image_points, world_points
