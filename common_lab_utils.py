@@ -1,22 +1,90 @@
 import cv2
 import numpy as np
+from pylie import SO3, SE3
 from dataclasses import dataclass
 
 
-@dataclass
-class CameraModel:
-    """Struct for camera model data."""
+def homogeneous(x):
+    """Transforms Cartesian column vectors to homogeneous column vectors"""
+    return np.r_[x, [np.ones(x.shape[1])]]
 
-    K: np.ndarray             # camera matrix
-    dist_coeffs: np.ndarray   # distortion coefficients
+
+def hnormalized(x):
+    """Transforms homogeneous column vector to Cartesian column vectors"""
+    return x[:-1] / x[-1]
+
+
+class PerspectiveCamera:
+    """Camera model for the perspective camera"""
+
+    def __init__(self,
+                 calibration_matrix: np.ndarray,
+                 distortion_coeffs: np.ndarray):
+        """Constructs the camera model.
+
+        :param calibration_matrix: The intrinsic calibration matrix.
+        :param distortion_coeffs: Distortion coefficients on the form [k1, k2, p1, p2, k3].
+        :param pose_world_camera: The pose of the camera in the world coordinate system.
+        """
+        self._calibration_matrix = calibration_matrix
+        self._calibration_matrix_inv = np.linalg.inv(calibration_matrix)
+        self._distortion_coeffs = distortion_coeffs
+
+    def undistort_image(self, distorted_image):
+        """Undistorts an image corresponding to the camera model.
+
+        :param distorted_image: The original, distorted image.
+        :returns: The undistorted image.
+        """
+
+        return cv2.undistort(distorted_image, self._calibration_matrix, self._distortion_coeffs)
+
+    def pixel_to_normalised(self, point_pixel):
+        """Transform a pixel coordinate to normalised coordinates
+
+        :param point_pixel: The 2D point in the image given in pixels.
+        """
+
+        if point_pixel.ndim == 1:
+            # Convert to column vector.
+            point_pixel = point_pixel[:, np.newaxis]
+
+        return self._calibration_matrix_inv @ homogeneous(point_pixel)
+
+    @property
+    def calibration_matrix(self):
+        """The intrinsic calibration matrix K."""
+        return self._calibration_matrix
+
+    @property
+    def calibration_matrix_inv(self):
+        """The inverse calibration matrix K^{-1}."""
+        return self._calibration_matrix_inv
+
+    @property
+    def distortion_coeffs(self):
+        """The distortion coefficients on the form [k1, k2, p1, p2, k3]."""
+        return self._distortion_coeffs
 
     @property
     def principal_point(self):
-        return self.K[0, 2], self.K[1, 2]
+        return self._calibration_matrix[0, 2], self._calibration_matrix[1, 2]
 
     @property
     def focal_lengths(self):
-        return self.K[0, 0], self.K[1, 1]
+        return self._calibration_matrix[0, 0], self._calibration_matrix[1, 1]
+
+    @staticmethod
+    def looks_at_pose(camera_pos_w: np.ndarray, target_pos_w: np.ndarray, up_vector_w: np.ndarray):
+        cam_to_target_w = target_pos_w - camera_pos_w
+        cam_z_w = cam_to_target_w.flatten() / np.linalg.norm(cam_to_target_w)
+
+        cam_to_right_w = np.cross(-up_vector_w.flatten(), cam_z_w)
+        cam_x_w = cam_to_right_w / np.linalg.norm(cam_to_target_w)
+
+        cam_y_w = np.cross(cam_z_w, cam_x_w)
+
+        return SE3((SO3(np.vstack((cam_x_w, cam_y_w, cam_z_w)).T), camera_pos_w))
 
 
 def retain_best(keypoints, num_to_keep):
@@ -92,6 +160,18 @@ class PlaneWorldModel:
 
         self._construct_world()
 
+    @property
+    def world_image(self):
+        return self._world_image
+
+    @property
+    def world_size(self):
+        return self._world_size
+
+    @property
+    def grid_size(self):
+        return self._grid_size
+
     def _construct_world(self):
         # Convert to gray scale.
         gray_img = cv2.cvtColor(self._world_image, cv2.COLOR_BGR2GRAY)
@@ -131,7 +211,7 @@ class PlaneWorldModel:
 @dataclass
 class PoseEstimate:
     """3D-2D pose estimation results"""
-    pose_w_c : np.ndarray      # FIXME: sophus se3d
+    pose_w_c : SE3
     image_inlier_points: list  # FIXME: 2D inlier points
     world_inlier_points: list  # FIXME: 3D inlier points
 
@@ -140,5 +220,5 @@ class PoseEstimate:
         # therefore using default values when no valid estimate was found.
         return False  # FIXME !pose_W_C.rotationMatrix().isIdentity(1e-8);
 
-class PoseEstimator:
-    
+# class PoseEstimator:
+#
