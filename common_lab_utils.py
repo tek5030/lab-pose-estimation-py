@@ -109,6 +109,29 @@ class PerspectiveCamera:
 
         return SE3((SO3(np.vstack((cam_x_w, cam_y_w, cam_z_w)).T), camera_pos_w))
 
+    @staticmethod
+    def jac_project_world_to_normalised_wrt_pose_w_c(pose_c_w: SE3, x_w: np.ndarray):
+        x_c = (pose_c_w * x_w).flatten()
+
+        d = 1 / x_c[-1]
+        xn = d * x_c
+
+        return np.array([[-d, 0, d * xn[0], xn[0] * xn[1], -1 - xn[0] ** 2, xn[1]],
+                         [0, -d, d * xn[1], 1 + xn[1] ** 2, -xn[0] * xn[1], -xn[0]]])
+
+    @staticmethod
+    def project_to_normalised_3d(x_c: np.ndarray):
+        return x_c / x_c[-1]
+
+    @classmethod
+    def project_to_normalised(cls, x_c: np.ndarray):
+        xn = cls.project_to_normalised_3d(x_c)
+        return xn[:2]
+
+    @classmethod
+    def reprojection_error_normalised(cls, x_c: np.ndarray, measured_x_n: np.ndarray):
+        return measured_x_n[:2] - cls.project_to_normalised(x_c)
+
 
 def retain_best(keypoints, num_to_keep):
     num_to_keep = np.minimum(num_to_keep, len(keypoints))
@@ -234,7 +257,6 @@ class PlaneWorldModel:
         # Compute descriptors for each keypoint.
         frame_keypoints, frame_descriptors = self._desc_extractor.compute(frame, frame_keypoints)
 
-        # fixme: use mask to extract points?
         # Do matching step and ratio test to remove bad points.
         matches = self._matcher.knnMatch(frame_descriptors, self._descriptors, k=2)
         good_matches = extract_good_ratio_matches(matches, max_ratio=self._max_ratio)

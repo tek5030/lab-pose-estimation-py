@@ -1,12 +1,12 @@
 import cv2
 import numpy as np
 import timeit
-from visualisation import Scene3D, ARRenderer, print_info_in_image
+from visualisation import Scene3D, ArRenderer, print_info_in_image
 from pylie import SE3, SO3
 from common_lab_utils import (
   PerspectiveCamera, PlaneWorldModel, Size
 )
-from pose_estimators import (PoseEstimate, PnPPoseEstimator)
+from pose_estimators import (PoseEstimate, PnPPoseEstimator, MobaPoseEstimator)
 
 
 def run_pose_estimation_lab():
@@ -20,11 +20,12 @@ def run_pose_estimation_lab():
     # TODO 2-6: Implement HomographyPoseEstimator.
     # TODO 7: Implement MobaPoseEstimator by finishing CameraProjectionMeasurement.
     # Construct pose estimator.
-    # pose_estimator = PnPPoseEstimator(camera_model.calibration_matrix, True)
-    pose_estimator = HomographyPoseEstimator(camera_model.calibration_matrix)
+    # init_pose_estimator = PnPPoseEstimator(camera_model.calibration_matrix, False)
+    init_pose_estimator = HomographyPoseEstimator(camera_model.calibration_matrix)
+    pose_estimator = MobaPoseEstimator(init_pose_estimator, camera_model)
 
     # Construct AR visualizer.
-    ar_example = ARRenderer(world_model, camera_model)
+    ar_example = ArRenderer(world_model, camera_model)
 
     # Construct 3D visualiser.
     scene_3d = Scene3D(world_model, camera_model)
@@ -188,7 +189,7 @@ class HomographyPoseEstimator:
         scale = (R_bar * M_bar).sum() / (M_bar**2).sum()
 
         # Extract the translation t.
-        t = M[:, 2] * scale
+        t = M[:, [2]] * scale
 
         # Check that this is the correct solution by testing the last element of t.
         if t[-1] < 0:

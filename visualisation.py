@@ -41,7 +41,7 @@ class Scene3D:
         self._plotter.add_key_event('q', exit_callback)
 
         # Show window.
-        self._plotter.show(title="3D visualization", interactive=True, interactive_update=True)
+        self._plotter.show(title="3D visualisation", interactive=True, interactive_update=True)
 
     def _update_current_camera_visualisation(self, undistorted_frame, estimate: PoseEstimate):
         # Remove old visualisation.
@@ -63,7 +63,7 @@ class Scene3D:
         self._plotter.show()
 
 
-class ARRenderer:
+class ArRenderer:
     """Renders the 3D world scene in camera perspective"""
 
     def __init__(self, world_model: PlaneWorldModel, camera_model: PerspectiveCamera, hide_rendering=True):
@@ -100,7 +100,7 @@ class ARRenderer:
         self._plotter.add_light(pv.Light(light_type='scene light', position=(0, 0, 5)))
 
         # Show window.
-        self._plotter.show(title="AR visualization", window_size=[img_width, img_height],
+        self._plotter.show(title="AR visualisation", window_size=[img_width, img_height],
                            interactive=False, interactive_update=True)
 
     def update(self, estimate: PoseEstimate):
@@ -186,7 +186,7 @@ def print_info_in_image(image: np.ndarray,
     if not estimate.is_found():
         return
 
-    t_cm = estimate.pose_w_c.translation * 100.
+    t_cm = estimate.pose_w_c.translation.ravel() * 100.
     cv2.putText(image, f"Pos: ({t_cm[0]: #0.1f}, {t_cm[1]: #0.1f}, {t_cm[2]: #0.1f}) cm",
                 (10, 60), font_face, font_scale, colour_green)
 

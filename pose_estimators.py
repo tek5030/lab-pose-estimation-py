@@ -2,12 +2,14 @@ import numpy as np
 import cv2
 from pylie import SO3, SE3
 from dataclasses import dataclass
+from common_lab_utils import PerspectiveCamera
+from nonlinear import PrecalibratedCameraMeasurementsFixedWorld, PrecalibratedMotionOnlyBAObjective, levenberg_marquardt
 
 
 @dataclass
 class PoseEstimate:
     """3D-2D pose estimation results"""
-    pose_w_c : SE3 = None
+    pose_w_c: SE3 = None
     image_inlier_points: np.ndarray = None
     world_inlier_points: np.ndarray = None
 
@@ -55,3 +57,46 @@ class PnPPoseEstimator:
 
         # Return the pose of the camera in the world frame.
         return PoseEstimate(pose_c_w.inverse(), inlier_image_points, inlier_world_points)
+
+
+class MobaPoseEstimator:
+    """Iterative pose estimator for calibrated camera with 3D-2D correspondences.
+    This pose estimator needs another pose estimator, which it will use to initialise the estimate and find inliers.
+    """
+    def __init__(self, initial_pose_estimator, camera_model: PerspectiveCamera):
+        """Constructs pose estimator.
+        :param initial_pose_estimator: Pointer to a pose estimator for initialiwation and inlier extraction.
+        :param camera_model: Camera model
+        """
+        self._initial_pose_estimator = initial_pose_estimator
+        self._camera_model = camera_model
+
+    def estimate(self, image_points, world_points):
+        """Estimates camera pose from 3D-2D correspondences.
+        :param image_points: 2D image points in pixels.
+        :param world_points: 3D world points.
+        """
+
+        # Get initial pose estimate.
+        estimate = self._initial_pose_estimator.estimate(image_points, world_points)
+
+        if not estimate.is_found():
+            return estimate
+
+        # Create measurement set.
+        measurement = PrecalibratedCameraMeasurementsFixedWorld(self._camera_model,
+                                                                estimate.image_inlier_points,
+                                                                estimate.world_inlier_points)
+
+        # Create objective function.
+        objective = PrecalibratedMotionOnlyBAObjective(measurement)
+
+        # Optimize and update estimate.
+        states, cost, _, _ = levenberg_marquardt(estimate.pose_w_c, objective)
+        estimate.pose_w_c = states[-2]
+
+        # Print cost.
+        print(f"Cost: {cost[0]} -> {cost[-1]}")
+
+        return estimate
+
