@@ -156,8 +156,8 @@ class PlaneReference:
         pixel = np.atleast_2d(pixel)
         return \
             self._origin \
-            + np.einsum('i,j->ij', pixel[:, 0], self._x_dir) \
-            + np.einsum('i,j->ij', pixel[:, 1], self._y_dir)
+            + np.einsum('i,j->ij', self._units_per_pixel_x * pixel[:, 0], self._x_dir) \
+            + np.einsum('i,j->ij', self._units_per_pixel_y * pixel[:, 1], self._y_dir)
 
 
 class PlaneWorldModel:

@@ -20,7 +20,8 @@ def run_pose_estimation_lab():
     # TODO 2-6: Implement HomographyPoseEstimator.
     # TODO 7: Implement MobaPoseEstimator by finishing CameraProjectionMeasurement.
     # Construct pose estimator.
-    pose_estimator = PnPPoseEstimator(camera_model.calibration_matrix, True)
+    # pose_estimator = PnPPoseEstimator(camera_model.calibration_matrix, True)
+    pose_estimator = HomographyPoseEstimator(camera_model.calibration_matrix)
 
     # Construct AR visualizer.
     ar_example = None # fixme
