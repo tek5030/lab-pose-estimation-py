@@ -1,5 +1,6 @@
 import numpy as np
 import pyvista as pv
+import cv2
 from pylie import SE3
 from common_lab_utils import PlaneWorldModel, PerspectiveCamera
 from pose_estimators import PoseEstimate
@@ -167,3 +168,57 @@ def add_frustum(plotter, pose_w_c, camera_model, image, scale=0.1):
         plotter.add_mesh(rectangle, texture=tex, opacity=0.9, render=False)
     )
     return frustum_actors
+
+
+def print_info_in_image(image: np.ndarray,
+                        estimate: PoseEstimate,
+                        matcing_time_ms: float,
+                        pose_est_time_ms: float,
+                        show_inliers=True):
+    font_face = cv2.FONT_HERSHEY_PLAIN
+    font_scale = 1.0
+    colour_red = (0, 0, 255)
+    colour_green = (0, 255, 0)
+
+    cv2.putText(image, f"Matching {round(matcing_time_ms)} ms", (10, 20), font_face, font_scale, colour_red)
+    cv2.putText(image, f"Pose est.: {round(pose_est_time_ms)} ms", (10, 40), font_face, font_scale, colour_red)
+
+    if not estimate.is_found():
+        return
+
+    t_cm = estimate.pose_w_c.translation * 100.
+    cv2.putText(image, f"Pos: ({t_cm[0]: #0.1f}, {t_cm[1]: #0.1f}, {t_cm[2]: #0.1f}) cm",
+                (10, 60), font_face, font_scale, colour_green)
+
+    att_deg = attitude_from_rotation(estimate.pose_w_c.rotation.matrix)
+    cv2.putText(image, f"Att: ({att_deg[0]: #0.1f}, {att_deg[1]: #0.1f}, {att_deg[2]: #0.1f}) deg",
+                (10, 80), font_face, font_scale, colour_green)
+
+    if show_inliers:
+        for point in estimate.image_inlier_points:
+            cv2.drawMarker(image, point.astype(np.int32), colour_green, cv2.MARKER_CROSS, 5)
+
+
+def attitude_from_rotation(rot_mat: np.ndarray):
+    """Computes the rotations around the principal axes"""
+    att = np.zeros(3)
+
+    if rot_mat[2, 0] < 1.:
+        if rot_mat[2, 0] > -1.:
+            att[1] = np.arcsin(-rot_mat[2, 0])
+            cos_y_inv = 1. / np.cos(att[1])
+            att[0] = np.arctan2(rot_mat[2, 1] * cos_y_inv, rot_mat[2, 2] * cos_y_inv)
+            att[2] = np.arctan2(rot_mat[1, 0] * cos_y_inv, rot_mat[0, 0] * cos_y_inv)
+        else:
+            att[0] = np.arctan2(-rot_mat[1, 2], rot_mat[1, 1])
+            att[1] = 0.5 * np.pi
+            att[2] = 0.
+    else:
+        att[0] = np.arctan2(-rot_mat[1, 2], rot_mat[1, 1])
+        att[1] = -0.5 * np.pi
+        att[2] = 0.
+
+    att *= 180. / np.pi
+    att[0] = np.fmod(360. + att[0], 360.) - 180.
+
+    return att

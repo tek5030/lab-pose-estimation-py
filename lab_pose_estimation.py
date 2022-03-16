@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import timeit
-from visualisation import Scene3D, ARRenderer
+from visualisation import Scene3D, ARRenderer, print_info_in_image
 from pylie import SE3, SO3
 from common_lab_utils import (
   PerspectiveCamera, PlaneWorldModel, Size
@@ -60,20 +60,22 @@ def run_pose_estimation_lab():
         start = timeit.default_timer()
         image_points, world_points = world_model.find_correspondences(gray_frame)
         end = timeit.default_timer()
-        correspondence_matching_duration = end - start
+        matching_duration_ms = (end - start) * 1000.0
 
         # Update the pose estimate.
         # Measure how long the processing takes.
         start = timeit.default_timer()
         estimate = pose_estimator.estimate(image_points, world_points)
         end = timeit.default_timer()
-        pose_estimation_duration = end - start
+        pose_estimation_duration_ms = (end - start) * 1000.0
 
         # Update Augmented Reality visualization.
+        ar_frame = undistorted_frame.copy()
         ar_rendering, mask = ar_example.update(estimate)
         if ar_rendering is not None:
-            undistorted_frame[mask] = ar_rendering[mask]
-        cv2.imshow("AR visualisation", undistorted_frame)
+            ar_frame[mask] = ar_rendering[mask]
+        print_info_in_image(ar_frame, estimate, matching_duration_ms, pose_estimation_duration_ms, show_inliers=True)
+        cv2.imshow("AR visualisation", ar_frame)
 
         # Update the windows.
         do_exit = scene_3d.update(undistorted_frame, estimate)
