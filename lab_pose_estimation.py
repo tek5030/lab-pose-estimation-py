@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import timeit
-from scene_3d import Scene3D
+from visualisation import Scene3D, ARRenderer
 from pylie import SE3, SO3
 from common_lab_utils import (
   PerspectiveCamera, PlaneWorldModel, Size
@@ -15,7 +15,7 @@ def run_pose_estimation_lab():
     camera_model = setup_camera_model()
 
     # Construct plane world model.
-    world = create_world_model()
+    world_model = create_world_model()
 
     # TODO 2-6: Implement HomographyPoseEstimator.
     # TODO 7: Implement MobaPoseEstimator by finishing CameraProjectionMeasurement.
@@ -24,16 +24,16 @@ def run_pose_estimation_lab():
     pose_estimator = HomographyPoseEstimator(camera_model.calibration_matrix)
 
     # Construct AR visualizer.
-    ar_example = None # fixme
+    ar_example = ARRenderer(world_model, camera_model)
 
     # Construct 3D visualiser.
-    scene_3d = Scene3D(world)
+    scene_3d = Scene3D(world_model, camera_model)
 
     # Setup camera stream.
     video_source = 0
     cap = cv2.VideoCapture(video_source)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, camera_model.image_size.width)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_model.image_size.height)
 
     if not cap.isOpened():
         print(f"Could not open video source {video_source}")
@@ -41,8 +41,6 @@ def run_pose_estimation_lab():
     else:
         print(f"Successfully opened video source {video_source}")
 
-    # For dummy vis before Ragnar takes it to the next level!
-    dummy_theta = 0.
     while True:
         # Read next frame.
         success, curr_frame = cap.read()
@@ -60,7 +58,7 @@ def run_pose_estimation_lab():
         # Find the correspondences between the detected image points and the world points.
         # Measure how long the processing takes.
         start = timeit.default_timer()
-        image_points, world_points = world.find_correspondences(gray_frame)
+        image_points, world_points = world_model.find_correspondences(gray_frame)
         end = timeit.default_timer()
         correspondence_matching_duration = end - start
 
@@ -72,17 +70,13 @@ def run_pose_estimation_lab():
         pose_estimation_duration = end - start
 
         # Update Augmented Reality visualization.
-        # fixme: ar_example.update(undistorted_frame, pose_estimate, camera_model.K, correspondence_matching_duration, pose_estimation_duration)
-
-        # fixme: Temp. dummy estimate, move camera in a circle around the origin.
-        # dummy_theta += 0.01
-        # dummy_pos_world_cam = np.array([0.3 * np.cos(dummy_theta), 0.3 * np.sin(dummy_theta), .1])
-        # dummy_pose = PerspectiveCamera.looks_at_pose(dummy_pos_world_cam, np.zeros([3]), np.array([0., 0., 1.]))
-        # dummy_estimate = PoseEstimate(dummy_pose, None, None)
-        cv2.imshow("window", undistorted_frame)
+        ar_rendering, mask = ar_example.update(estimate)
+        if ar_rendering is not None:
+            undistorted_frame[mask] = ar_rendering[mask]
+        cv2.imshow("AR visualisation", undistorted_frame)
 
         # Update the windows.
-        do_exit = scene_3d.update(undistorted_frame, estimate, camera_model)
+        do_exit = scene_3d.update(undistorted_frame, estimate)
         if do_exit:
             break
         cv2.waitKey(10)
@@ -102,7 +96,10 @@ def setup_camera_model():
     # TODO 1: Set dist_coeffs according to the calibration.
     dist_coeffs = np.array([0., 2.2202255011309072e-01, 0., 0., -5.0348071005413975e-01])
 
-    return PerspectiveCamera(K, dist_coeffs)
+    # TODO 1: Set the image size corresponding to the calibration
+    image_size = Size(640, 480)
+
+    return PerspectiveCamera(K, dist_coeffs, image_size)
 
 
 def create_world_model():
@@ -157,7 +154,7 @@ class HomographyPoseEstimator:
         inliers = inlier_mask.ravel() > 0
 
         # Check that we have a valid result and enough inliers.
-        if H.size == 0 or inliers.sum() < min_number_points:
+        if H is None or inliers.sum() < min_number_points:
             return PoseEstimate()
 
         # Extract inliers.

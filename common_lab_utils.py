@@ -36,16 +36,18 @@ class PerspectiveCamera:
 
     def __init__(self,
                  calibration_matrix: np.ndarray,
-                 distortion_coeffs: np.ndarray):
+                 distortion_coeffs: np.ndarray,
+                 image_size: Size):
         """Constructs the camera model.
 
         :param calibration_matrix: The intrinsic calibration matrix.
         :param distortion_coeffs: Distortion coefficients on the form [k1, k2, p1, p2, k3].
-        :param pose_world_camera: The pose of the camera in the world coordinate system.
+        :param image_size: Size of image for this calibration.
         """
         self._calibration_matrix = calibration_matrix
         self._calibration_matrix_inv = np.linalg.inv(calibration_matrix)
         self._distortion_coeffs = distortion_coeffs
+        self._image_size = image_size
 
     def undistort_image(self, distorted_image):
         """Undistorts an image corresponding to the camera model.
@@ -82,6 +84,10 @@ class PerspectiveCamera:
     def distortion_coeffs(self):
         """The distortion coefficients on the form [k1, k2, p1, p2, k3]."""
         return self._distortion_coeffs
+
+    @property
+    def image_size(self):
+        return self._image_size
 
     @property
     def principal_point(self):
@@ -210,7 +216,7 @@ class PlaneWorldModel:
 
         # Store points and descriptors.
         ref = PlaneReference(
-            Size(*self._world_image.shape[1::-1]),
+            Size.from_numpy_shape(self._world_image.shape),
             self._world_size,
             np.array([-0.5 * self._world_size.width, 0.5 * self._world_size.height, 0.0]),
             np.array([1.0, 0.0, 0.0]),
