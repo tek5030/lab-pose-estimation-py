@@ -156,8 +156,8 @@ class HomographyPoseEstimator:
         H, inlier_mask = cv2.findHomography(world_points, image_points, cv2.RANSAC, 3)
         inliers = inlier_mask.ravel() > 0
 
-        # Check that we have enough inliers.
-        if len(inliers) < min_number_points:
+        # Check that we have a valid result and enough inliers.
+        if H.size == 0 or inliers.sum() < min_number_points:
             return PoseEstimate()
 
         # Extract inliers.

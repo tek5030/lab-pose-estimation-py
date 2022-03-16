@@ -34,7 +34,7 @@ class PnPPoseEstimator:
                                                          reprojectionError=2.0, confidence=0.99,
                                                          flags=cv2.SOLVEPNP_AP3P)
 
-        # Check that we have enough inliers.
+        # Check that we have a valid result and enough inliers.
         if not retval or len(inliers) < min_number_points:
             return PoseEstimate()
 
