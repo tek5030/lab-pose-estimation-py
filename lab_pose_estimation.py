@@ -1,31 +1,28 @@
 import cv2
 import numpy as np
 import timeit
-from visualisation import Scene3D, ArRenderer, print_info_in_image
-from pylie import SE3, SO3
-from common_lab_utils import (
-  PerspectiveCamera, PlaneWorldModel, Size
-)
-from pose_estimators import (PoseEstimate, PnPPoseEstimator, MobaPoseEstimator)
+from pylie import (SE3, SO3)
+from common_lab_utils import (PerspectiveCamera, PlaneWorldModel, Size)
+from pose_estimators import (MobaPoseEstimator, PoseEstimate, PnPPoseEstimator)
+from visualisation import (ArRenderer, Scene3D, print_info_in_image)
 
 
 def run_pose_estimation_lab():
-    # TODO 1: Calibrate camera and set parameters in setupCameraModel().
+    # TODO 1: Calibrate camera and set parameters in setupCameraModel() below.
     # Get the camera model parameters.
     camera_model = setup_camera_model()
 
     # Construct plane world model.
     world_model = create_world_model()
 
-    # TODO 2-6: Implement HomographyPoseEstimator.
-    # TODO 7: Implement MobaPoseEstimator by finishing CameraProjectionMeasurement.
+    # TODO 2: Implement HomographyPoseEstimator below.
     # Construct pose estimator.
-    # init_pose_estimator = PnPPoseEstimator(camera_model.calibration_matrix, False)
-    init_pose_estimator = HomographyPoseEstimator(camera_model.calibration_matrix)
+    init_pose_estimator = PnPPoseEstimator(camera_model, False)
+    # init_pose_estimator = HomographyPoseEstimator(camera_model)
     pose_estimator = MobaPoseEstimator(init_pose_estimator, camera_model)
 
     # Construct AR visualizer.
-    ar_example = ArRenderer(world_model, camera_model)
+    ar_renderer = ArRenderer(world_model, camera_model)
 
     # Construct 3D visualiser.
     scene_3d = Scene3D(world_model, camera_model)
@@ -72,17 +69,17 @@ def run_pose_estimation_lab():
 
         # Update Augmented Reality visualization.
         ar_frame = undistorted_frame.copy()
-        ar_rendering, mask = ar_example.update(estimate)
+        ar_rendering, mask = ar_renderer.update(estimate)
         if ar_rendering is not None:
             ar_frame[mask] = ar_rendering[mask]
         print_info_in_image(ar_frame, estimate, matching_duration_ms, pose_estimation_duration_ms, show_inliers=True)
-        cv2.imshow("AR visualisation", ar_frame)
 
         # Update the windows.
+        cv2.imshow("AR visualisation", ar_frame)
+        cv2.waitKey(10)
         do_exit = scene_3d.update(undistorted_frame, estimate)
         if do_exit:
             break
-        cv2.waitKey(10)
 
 
 def setup_camera_model():
@@ -141,11 +138,20 @@ def create_world_model():
 
 
 class HomographyPoseEstimator:
-    def __init__(self, calibration_matrix: np.ndarray):
-        self._calibration_matrix_inv = np.linalg.inv(calibration_matrix)
+    """Homography-based pose estimator for a calibrated camera and planar world points."""
+
+    def __init__(self, camera_model: PerspectiveCamera):
+        """Constructs the pose estimator.
+        :param camera_model: The camera model for the calibrated camera.
+        """
+
+        self._calibration_matrix_inv = camera_model.calibration_matrix_inv
 
     def estimate(self, image_points, world_points):
-        """Estimate pose from the homography computed from 2d-3d (planar) correspondences"""
+        """Estimate camera pose with the homography computed from 2D-3D (planar) correspondences
+        :param image_points: 2D image points.
+        :param world_points: 3D (planar) world points.
+        """
 
         # Check that we have a minimum required number of points, here 3 times the theoretic minimum.
         min_number_points = 12
@@ -164,6 +170,7 @@ class HomographyPoseEstimator:
         inlier_image_points = image_points[inliers]
         inlier_world_points = world_points[inliers]
 
+        # TODO 2.1: Compute M.
         # Compute the matrix M and extract M_bar (the two first columns of M).
         M = self._calibration_matrix_inv @ H
         M_bar = M[:, :2]
@@ -175,9 +182,11 @@ class HomographyPoseEstimator:
             print("Warning: SVD computation did not converge")
             return PoseEstimate()
 
+        # TODO 2.2: Compute R_bar.
         # Compute R_bar (the two first columns of R) from the result of the SVD.
         R_bar = U @ Vh
 
+        # TODO 2.3: Construct R.
         # Construct R by inserting R_bar and computing the third column of R from the two first.
         # Remember to check det(R)!
         R = np.c_[R_bar, np.cross(R_bar[:, 0], R_bar[:, 1])]
@@ -185,9 +194,11 @@ class HomographyPoseEstimator:
         if np.linalg.det(R) < 0:
             R[:, 2] *= -1.
 
+        # TODO 2.4: Compute the scale.
         # Compute the scale factor.
         scale = (R_bar * M_bar).sum() / (M_bar**2).sum()
 
+        # TODO 2.5: Find the correct solution.
         # Extract the translation t.
         t = M[:, [2]] * scale
 

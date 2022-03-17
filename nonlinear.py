@@ -80,7 +80,7 @@ class PrecalibratedMotionOnlyBAObjective:
         return A, b, b.T.dot(b)
 
 
-def gauss_newton(x_init, model, cost_thresh=1e-6, delta_thresh=1e-6, max_num_it=10):
+def gauss_newton(x_init, model, cost_thresh=1e-9, delta_thresh=1e-9, max_num_it=20):
     """Implements nonlinear least squares using the Gauss-Newton algorithm
     :param x_init: The initial state
     :param model: Model with a function linearise() the returns A, b and the cost for the current state estimate.
@@ -112,7 +112,7 @@ def gauss_newton(x_init, model, cost_thresh=1e-6, delta_thresh=1e-6, max_num_it=
     return x, cost, A, b
 
 
-def levenberg_marquardt(x_init, model, cost_thresh=1e-6, delta_thresh=1e-6, max_num_it=10):
+def levenberg_marquardt(x_init, model, cost_thresh=1e-9, delta_thresh=1e-9, max_num_it=20):
     """Implements nonlinear least squares using the Levenberg-Marquardt algorithm
     :param x_init: The initial state
     :param model: Model with a function linearise() the returns A, b and the cost for the current state estimate.

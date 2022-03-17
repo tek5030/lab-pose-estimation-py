@@ -4,6 +4,8 @@ from pylie import SO3, SE3
 
 
 class Size:
+    """Represents image size"""
+
     def __init__(self, width: float, height: float):
         self._width = width
         self._height = height
@@ -87,18 +89,22 @@ class PerspectiveCamera:
 
     @property
     def image_size(self):
+        """The image size"""
         return self._image_size
 
     @property
     def principal_point(self):
+        """The principal point (p_u, p_v)"""
         return self._calibration_matrix[0, 2], self._calibration_matrix[1, 2]
 
     @property
     def focal_lengths(self):
+        """The focal lengths (f_u, f_v)"""
         return self._calibration_matrix[0, 0], self._calibration_matrix[1, 1]
 
     @staticmethod
     def looks_at_pose(camera_pos_w: np.ndarray, target_pos_w: np.ndarray, up_vector_w: np.ndarray):
+        """Computes the pose for a camera that looks at a given point."""
         cam_to_target_w = target_pos_w - camera_pos_w
         cam_z_w = cam_to_target_w.flatten() / np.linalg.norm(cam_to_target_w)
 
@@ -111,6 +117,7 @@ class PerspectiveCamera:
 
     @staticmethod
     def jac_project_world_to_normalised_wrt_pose_w_c(pose_c_w: SE3, x_w: np.ndarray):
+        """Computes the Jacobian for the projection of a world point to normalised coordinates wrt camera pose"""
         x_c = (pose_c_w * x_w).flatten()
 
         d = 1 / x_c[-1]
@@ -121,19 +128,23 @@ class PerspectiveCamera:
 
     @staticmethod
     def project_to_normalised_3d(x_c: np.ndarray):
+        """Projects a 3D point in the camera coordinate system onto the 3D normalised image plane"""
         return x_c / x_c[-1]
 
     @classmethod
     def project_to_normalised(cls, x_c: np.ndarray):
+        """Projects a 3D point in the camera coordinate system onto the 2D normalised image plane"""
         xn = cls.project_to_normalised_3d(x_c)
         return xn[:2]
 
     @classmethod
     def reprojection_error_normalised(cls, x_c: np.ndarray, measured_x_n: np.ndarray):
+        """Computes the reprojection error in normalised image coordinates"""
         return measured_x_n[:2] - cls.project_to_normalised(x_c)
 
 
 def retain_best(keypoints, num_to_keep):
+    """Retains the given number of keypoints with highest response"""
     num_to_keep = np.minimum(num_to_keep, len(keypoints))
     best = np.argpartition([p.response for p in keypoints], -num_to_keep)[-num_to_keep:]
     return best
@@ -159,6 +170,8 @@ def extract_good_ratio_matches(matches, max_ratio):
 
 
 class PlaneReference:
+    """Represents the transformation between world image pixels and 3D world plane coordinates"""
+
     def __init__(
             self,
             image_size: Size,
@@ -182,6 +195,7 @@ class PlaneReference:
         self._units_per_pixel_y = scene_size.height / image_size.height
 
     def pixel_to_world(self, pixel):
+        """Computes the corresponding world coordinate for a "world image" pixel"""
         pixel = np.atleast_2d(pixel)
         return \
             self._origin \
@@ -251,6 +265,8 @@ class PlaneWorldModel:
         self._descriptors = new_descriptors
 
     def find_correspondences(self, frame: np.ndarray):
+        """Computes correspondences between the world image and a given frame"""
+
         # Detect keypoints
         frame_keypoints = self._detector.detect(frame)
 
