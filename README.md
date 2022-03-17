@@ -13,3 +13,23 @@ The lab is carried out by following these steps:
 4. [Experiment with Motion-only Bundle Adjustment](lab-guide/4-experiment-with-motion-only-bundle-adjustment.md)
 
 Please start the lab by going to the [first step](lab-guide/1-get-an-overview.md).
+
+## Setup for Jetson (on the lab)
+
+- Clone the repo into the directory `~/tek5030`
+- Run the setup script `setup_jetson.bash` which 
+  - creates a "venv"
+  - downloads a precompiled VTK-wheel
+  - installs requirements from `requirements-jetson.txt`
+- Open the editor of your choice
+
+```bash
+mkdir -p ~/tek5030
+cd ~/tek5030
+git clone https://github.com/tek5030/lab-pose-estimation-py.git
+cd lab-pose-estimation-py
+./setup_jetson.bash
+
+# source venv/bin/activate
+# python lab_pose_estimation.py
+```
