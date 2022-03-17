@@ -4,4 +4,4 @@ opencv-python
 pyvista
 pytest
 scipy
-vtk @ file:///home/nvidia/dev/tek5030/lab-pose-estimation-py/vtk-9.0.1-cp38-cp38-linux_aarch64.whl
+vtk @ file:///home/nvidia/tek5030/lab-pose-estimation-py/vtk-9.0.1-cp38-cp38-linux_aarch64.whl
