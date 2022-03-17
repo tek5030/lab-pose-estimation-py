@@ -3,8 +3,8 @@ import cv2
 from pylie import SO3, SE3
 from dataclasses import dataclass
 from common_lab_utils import PerspectiveCamera
-from nonlinear import (PrecalibratedCameraMeasurementsFixedWorld, PrecalibratedMotionOnlyBAObjective,
-                       gauss_newton, levenberg_marquardt)
+from bundle_adjustment import (PrecalibratedCameraMeasurementsFixedWorld, PrecalibratedMotionOnlyBAObjective,
+                               gauss_newton, levenberg_marquardt)
 
 
 @dataclass

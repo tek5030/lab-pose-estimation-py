@@ -9,63 +9,59 @@ We are given this 2D world map:
 The main steps in today's lab are:
 - Calibrate the camera (to save time, we will use calibration results computed in advance).
 - Create a planar 3D world model from the map with point descriptors.
-- Estimate the camera pose from 3D-2D correspondences:
+- Estimate the camera pose from 2D-3D correspondences:
   - Homography-based
   - Motion-only Bundle Adjustment (moba)
-- Visualize the 3D world frame in the camera views with Augmented Reality (AR).
+- Visualize the 3D world frame in the camera views with [Augmented Reality (AR)](https://en.wikipedia.org/wiki/Augmented_reality).
 - Visualize the camera and world model in 3D.
 
 ## Introduction to the project source files
-We have chosen to distribute the code on the following files:
-- *main.cpp*   
-  Starts lab 6, catches any exceptions and prints their error message on the console.
+We have chosen to distribute the code on the following modules:
 
-- *lab_6.h*, *lab_6.cpp*   
-  Runs the lab 6 loop.
+- [**lab_pose_estimation.py**](../lab_pose_estimation.py)
 
-- *ar_example.h*, *ar_example.cpp*   
-  Visualizes the world frame in the image frames given the estimated camera pose.
+  Contains the main loop of the program and all exercises. 
+  Your main task will be to finish `HomographyPoseEstimator` in this module.
+  Please read quickly through the function `run_pose_estimation_lab()` to get a feel of how the lab works.
 
-- *camera_projection_measurement.h*, *camera_projection_measurement.cpp*   
-  Represents a camera projection of a world point, given in normalized image coordinates.
-  You will be responsible for implementing most of the computations in this class.
+- [**common_lab_utils.py**](../common_lab_utils.py)
 
-- *feature_utils.h*, *feature_utils.cpp*   
-  Utility functions for feature matching (see [lab 4](https://github.com/tek5030/lab_04)).
+  This module contains utility functions and classes that we will use both in the lab and in the solution.
+  Please take a quick look through the code.
 
-- *homography_pose_estimator.h*, *homography_pose_estimator.cpp*   
-  Implements homography-based pose estimation for a calibrated camera and planar world points.
-  You will be responsible for finishing this estimator.
+- [**visualisation.py**](../visualisation.py)  
 
-- *moba_pose_estimator.h*, *moba_pose_estimator.cpp*   
-  Iterative non-linear pose estimator for calibrated camera with 3D-2D correspondences.
+  Contains functionality for visualising in 3D and rendering for AR.
 
-- *plane_world_model.h*, *plane_world_model.cpp*   
-  Represents a planar world in 3D.
-  Finds 3D-2D correspondences between the world map and camera images using feature matching.
+- [**bundle_adjustment.py**](../bundle_adjustment.py)
 
-- *pnp_pose_estimator.h*, *pnp_pose_estimator.cpp*   
-  PnP-based pose estimator for calibrated camera with 3D-2D correspondences.
-  Can be used as an alternative to `HomographyPoseEstimator`.
+  Contains functionality for solving bundle adjustment problems, 
+  including implementations of the Gauss-Newton and Levenberg-Marquardt methods. 
 
-- *pose_estimator.h*   
-  Defines an abstract interface for 3D-2D pose estimators.
+- [**pose_estimators.py**](../pose_estimators.py)
 
-- *scene_3d.h*, *scene_3d.cpp*   
-  Visualizes the result in 3D.
+  Contains pose estimators that have already been implemented (`PnPPoseEstimator` and `MobaPoseEstimator`)
 
+- [**solution_pose_estimation.py**](../solution_pose_estimation.py)
+
+  This is our proposed solution to the lab.
+  Please try to solve the lab with help from others instead of just jumping straight to the solution ;)
 
 Other files we will use:
-- *calibSettings.xml*   
+- [**calibSettings.xml**](../calibSettings.xml)
+  
   Parameter file for calibrating a camera (can be used when calibrating your own camera).
 
-- *cameraParameters.xml*   
-  Camera calibration result for the Microsoft cameras in the lab.
+- [**cameraParameters.xml**](../cameraParameters.xml)   
 
-- *world_A3.png*   
+  Camera calibration result that should work ok for the cameras in the lab.
+
+- [**world_A3.png**](../world_A3.png)
+
   Planar world for printouts on A3 paper (we will use this in the lab).
 
-- *world_A4.png*   
+- [**world_A4.png**](../world_A4.png)
+
   Planar world for printouts on A4 paper.
 
 Please continue to the [next step](2-camera-calibration.md) to get started!
