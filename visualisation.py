@@ -5,6 +5,7 @@ from pylie import SE3
 from common_lab_utils import PlaneWorldModel, PerspectiveCamera
 from pose_estimators import PoseEstimate
 
+
 class Scene3D:
     """Visualises the lab in 3D"""
 
@@ -13,6 +14,7 @@ class Scene3D:
 
     def __init__(self, world_model: PlaneWorldModel, camera_model: PerspectiveCamera):
         """Sets up the 3D viewer"""
+
         self._grid_length = world_model.grid_length
         self._camera_model = camera_model
         self._plotter = pv.Plotter()
@@ -55,12 +57,11 @@ class Scene3D:
                 add_axis(self._plotter, estimate.pose_w_c, self._grid_length)
 
     def update(self, undistorted_frame, estimate: PoseEstimate, time=10):
+        """Updates the viewer with new camera frame"""
+
         self._update_current_camera_visualisation(undistorted_frame, estimate)
         self._plotter.update(time)
         return self._do_exit
-
-    def show(self):
-        self._plotter.show()
 
 
 class ArRenderer:
@@ -104,6 +105,8 @@ class ArRenderer:
                            interactive=False, interactive_update=True)
 
     def update(self, estimate: PoseEstimate):
+        """Updates the renderer with new camera pose estimate"""
+
         if not estimate.is_found():
             return None, None
 
@@ -118,6 +121,8 @@ class ArRenderer:
 
 
 def add_axis(plotter, pose: SE3, scale=10.0):
+    """Adds a 3D axis object to the pyvista plotter"""
+
     T = pose.to_matrix()
 
     point = pv.Sphere(radius=0.1 * scale)
@@ -142,6 +147,8 @@ def add_axis(plotter, pose: SE3, scale=10.0):
 
 
 def add_frustum(plotter, pose_w_c, camera_model, image, scale=0.1):
+    """Adds a camera frustum to the pyvista plotter"""
+
     S = pose_w_c.to_matrix() @ np.diag([scale, scale, scale, 1.0])
 
     img_height, img_width = image.shape[:2]
@@ -175,6 +182,8 @@ def print_info_in_image(image: np.ndarray,
                         matcing_time_ms: float,
                         pose_est_time_ms: float,
                         show_inliers=True):
+    """Prints results in the given image"""
+
     font_face = cv2.FONT_HERSHEY_PLAIN
     font_scale = 1.0
     colour_red = (0, 0, 255)
@@ -187,11 +196,11 @@ def print_info_in_image(image: np.ndarray,
         return
 
     t_cm = estimate.pose_w_c.translation.ravel() * 100.
-    cv2.putText(image, f"Pos: ({t_cm[0]: #0.1f}, {t_cm[1]: #0.1f}, {t_cm[2]: #0.1f}) cm",
+    cv2.putText(image, f"Pos: ({t_cm[0]:#0.1f}, {t_cm[1]:#0.1f}, {t_cm[2]:#0.1f}) cm",
                 (10, 60), font_face, font_scale, colour_green)
 
     att_deg = attitude_from_rotation(estimate.pose_w_c.rotation.matrix)
-    cv2.putText(image, f"Att: ({att_deg[0]: #0.1f}, {att_deg[1]: #0.1f}, {att_deg[2]: #0.1f}) deg",
+    cv2.putText(image, f"Att: ({att_deg[0]:#0.1f}, {att_deg[1]:#0.1f}, {att_deg[2]:#0.1f}) deg",
                 (10, 80), font_face, font_scale, colour_green)
 
     if show_inliers:
@@ -200,7 +209,13 @@ def print_info_in_image(image: np.ndarray,
 
 
 def attitude_from_rotation(rot_mat: np.ndarray):
-    """Computes the rotations around the principal axes"""
+    """Computes the rotations around the principal axes of a right-down-inwards coordinate system.
+
+    This does not really give us the attitude in the world coordinate system,
+    (which is right-up-outwards for visualisation reasons),
+    but anyway gives us an intuitive roll-pitch-yaw for getting a feel with the camera rotation measurements.
+    """
+
     att = np.zeros(3)
 
     if rot_mat[2, 0] < 1.:

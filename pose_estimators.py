@@ -3,27 +3,45 @@ import cv2
 from pylie import SO3, SE3
 from dataclasses import dataclass
 from common_lab_utils import PerspectiveCamera
-from nonlinear import PrecalibratedCameraMeasurementsFixedWorld, PrecalibratedMotionOnlyBAObjective, levenberg_marquardt
+from bundle_adjustment import (PrecalibratedCameraMeasurementsFixedWorld, PrecalibratedMotionOnlyBAObjective,
+                               gauss_newton, levenberg_marquardt)
 
 
 @dataclass
 class PoseEstimate:
     """3D-2D pose estimation results"""
-    pose_w_c: SE3 = None
-    image_inlier_points: np.ndarray = None
-    world_inlier_points: np.ndarray = None
+    pose_w_c: SE3 = None                        # Camera pose in the world.
+    image_inlier_points: np.ndarray = None      # 2D inlier image points.
+    world_inlier_points: np.ndarray = None      # 3D inlier world points.
 
     def is_found(self):
+        """Checks if estimation succeeded.
+        :return: True if result was found.
+        """
         return self.pose_w_c is not None
 
 
 class PnPPoseEstimator:
-    def __init__(self, calibration_matrix: np.ndarray, do_iterative_estimation=False):
-        self._calibration_matrix = calibration_matrix
+    """PnP-based pose estimator for calibrated camera with 2D-3D correspondences.
+
+    This pose estimator first computes an initial result and extracts an inlier set using PnP.
+    Then it optionally estimates the pose from the entire inlier set using an iterative method.
+    """
+
+    def __init__(self, camera_model: PerspectiveCamera, do_iterative_estimation=False):
+        """Constructs the pose estimator.
+
+        :param camera_model: The camera model for the calibrated camera.
+        :param do_iterative_estimation: Estimates pose iteratively if True.
+        """
+        self._calibration_matrix = camera_model.calibration_matrix
         self._do_iterative_estimation = do_iterative_estimation
 
     def estimate(self, image_points, world_points):
-        """Estimate pose from the 2d-3d correspondences using PnP"""
+        """Estimate camera pose from 2D-3D correspondences
+        :param image_points: 2D image points in pixels.
+        :param world_points: 3D world points.
+        """
 
         # Check that we have a minimum required number of points, here 3 times the theoretic minimum.
         min_number_points = 9
@@ -46,7 +64,7 @@ class PnPPoseEstimator:
         inlier_world_points = world_points[inliers]
 
         # Compute the camera pose with an iterative method using the entire inlier set.
-        # Use "cv::solvePnP" on inlier points to improve "r_vec" and "t_vec".
+        # Use "cv2.solvePnPRefineLM" on inlier points to improve "r_vec" and "t_vec".
         # Use the iterative method with current r_vec and t_vec as initial values.
         if self._do_iterative_estimation:
             rvec, tvec = cv2.solvePnPRefineLM(inlier_world_points, inlier_image_points,
@@ -60,19 +78,20 @@ class PnPPoseEstimator:
 
 
 class MobaPoseEstimator:
-    """Iterative pose estimator for calibrated camera with 3D-2D correspondences.
+    """Iterative pose estimator for calibrated camera with 2D-3D correspondences.
     This pose estimator needs another pose estimator, which it will use to initialise the estimate and find inliers.
     """
-    def __init__(self, initial_pose_estimator, camera_model: PerspectiveCamera):
+    def __init__(self, initial_pose_estimator, camera_model: PerspectiveCamera, print_cost=True):
         """Constructs pose estimator.
         :param initial_pose_estimator: Pointer to a pose estimator for initialiwation and inlier extraction.
         :param camera_model: Camera model
         """
         self._initial_pose_estimator = initial_pose_estimator
         self._camera_model = camera_model
+        self._print_cost = print_cost
 
     def estimate(self, image_points, world_points):
-        """Estimates camera pose from 3D-2D correspondences.
+        """Estimates camera pose from 2D-3D correspondences.
         :param image_points: 2D image points in pixels.
         :param world_points: 3D world points.
         """
@@ -96,7 +115,8 @@ class MobaPoseEstimator:
         estimate.pose_w_c = states[-2]
 
         # Print cost.
-        print(f"Cost: {cost[0]} -> {cost[-1]}")
+        if self._print_cost:
+            print(f"Motion only BA solved in {(len(cost) - 1):#2d} iterations, cost: {cost[0]:#f} -> {cost[-1]:#f}")
 
         return estimate
 

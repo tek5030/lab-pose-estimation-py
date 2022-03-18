@@ -7,7 +7,7 @@ from pose_estimators import (MobaPoseEstimator, PoseEstimate, PnPPoseEstimator)
 from visualisation import (ArRenderer, Scene3D, print_info_in_image)
 
 
-def run_pose_estimation_lab():
+def run_pose_estimation_solution():
     # TODO 1: Calibrate camera and set parameters in setupCameraModel() below.
     # Get the camera model parameters.
     camera_model = setup_camera_model()
@@ -18,7 +18,9 @@ def run_pose_estimation_lab():
 
     # TODO 3-7: Implement HomographyPoseEstimator below.
     # Construct pose estimator.
-    pose_estimator = HomographyPoseEstimator(camera_model)
+    init_pose_estimator = HomographyPoseEstimator(camera_model)
+    # init_pose_estimator = PnPPoseEstimator(camera_model, do_iterative_estimation=False)
+    pose_estimator = MobaPoseEstimator(init_pose_estimator, camera_model)
 
     # Construct AR visualizer.
     ar_renderer = ArRenderer(world_model, camera_model)
@@ -95,7 +97,7 @@ def setup_camera_model():
     # TODO 1.2: Set dist_coeffs according to the calibration.
     dist_coeffs = np.array([0., 2.2202255011309072e-01, 0., 0., -5.0348071005413975e-01])
 
-    # TODO 1.3: Set the image size corresponding to the calibration.
+    # TODO 1.3: Set the image size corresponding to the calibration
     image_size = Size(640, 480)
 
     return PerspectiveCamera(K, dist_coeffs, image_size)
@@ -172,7 +174,7 @@ class HomographyPoseEstimator:
 
         # TODO 3: Compute M.
         # Compute the matrix M and extract M_bar (the two first columns of M).
-        M = np.identity(3)          # Dummy, replace!
+        M = self._calibration_matrix_inv @ H
         M_bar = M[:, :2]
 
         # Perform SVD on M_bar.
@@ -184,20 +186,29 @@ class HomographyPoseEstimator:
 
         # TODO 4: Compute R_bar.
         # Compute R_bar (the two first columns of R) from the result of the SVD.
-        R_bar = np.zeros([3, 2])    # Dummy, replace!
+        R_bar = U @ Vh
 
         # TODO 5: Construct R.
         # Construct R by inserting R_bar and computing the third column of R from the two first.
         # Remember to check det(R)!
-        R = np.identity(3)          # Dummy, replace!
+        R = np.c_[R_bar, np.cross(R_bar[:, 0], R_bar[:, 1])]
+
+        if np.linalg.det(R) < 0:
+            R[:, 2] *= -1.
 
         # TODO 6: Compute the scale.
         # Compute the scale factor.
-        scale = 0.                  # Dummy, replace!
+        scale = (R_bar * M_bar).sum() / (M_bar**2).sum()
 
         # TODO 7: Find the correct solution.
         # Extract the translation t.
-        t = np.zeros([3, 1])        # Dummy, replace!
+        t = M[:, [2]] * scale
+
+        # Check that this is the correct solution by testing the last element of t.
+        if t[-1] < 0:
+            # Switch to other solution.
+            t = -t
+            R[:, :2] *= -1.
 
         # We now have the pose of the world in the camera frame!
         pose_c_w = SE3((SO3(R), t))
@@ -207,4 +218,4 @@ class HomographyPoseEstimator:
 
 
 if __name__ == "__main__":
-    run_pose_estimation_lab()
+    run_pose_estimation_solution()
