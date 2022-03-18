@@ -209,7 +209,12 @@ def print_info_in_image(image: np.ndarray,
 
 
 def attitude_from_rotation(rot_mat: np.ndarray):
-    """Computes the rotations around the principal axes"""
+    """Computes the rotations around the principal axes of a right-down-inwards coordinate system.
+
+    This does not really give us the attitude in the world coordinate system,
+    (which is right-up-outwards for visualisation reasons),
+    but anyway gives us an intuitive roll-pitch-yaw for getting a feel with the camera rotation measurements.
+    """
 
     att = np.zeros(3)
 

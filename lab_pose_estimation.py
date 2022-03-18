@@ -95,7 +95,7 @@ def setup_camera_model():
     # TODO 1.2: Set dist_coeffs according to the calibration.
     dist_coeffs = np.array([0., 2.2202255011309072e-01, 0., 0., -5.0348071005413975e-01])
 
-    # TODO 1.3: Set the image size corresponding to the calibration
+    # TODO 1.3: Set the image size corresponding to the calibration.
     image_size = Size(640, 480)
 
     return PerspectiveCamera(K, dist_coeffs, image_size)
