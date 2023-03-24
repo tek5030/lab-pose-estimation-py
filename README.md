@@ -23,7 +23,7 @@ Please start the lab by going to the [first step](lab-guide/1-get-an-overview.md
 Here is a quick reference if you need to set up a Python virtual environment manually:
 
 ```bash
-python3.8 -m venv venv  # any python version > 3.8 is OK
+python3.8 -m venv venv  # any python version >= 3.8 is OK
 source venv/bin/activate.
 # expect to see (venv) at the beginning of your prompt.
 pip install -U pip  # <-- Important step for Ubuntu 18.04!
