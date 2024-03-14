@@ -75,8 +75,8 @@ def run_pose_estimation_lab():
 
         # Update the windows.
         cv2.imshow("AR visualisation", ar_frame)
-        cv2.waitKey(10)
-        do_exit = scene_3d.update(undistorted_frame, estimate)
+        key = cv2.pollKey()
+        do_exit = (key == ord('q')) or scene_3d.update(undistorted_frame, estimate)
         if do_exit:
             break
 
