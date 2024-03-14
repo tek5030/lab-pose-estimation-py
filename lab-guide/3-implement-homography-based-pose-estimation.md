@@ -1,5 +1,5 @@
 # Step 3: Implement homography-based pose estimation
-We will in this part follow [the slides from this week's lecture](https://www.uio.no/studier/emner/matnat/its/TEK5030/v20/forelesninger/lecture_6_1_pose-estimation.pdf) to finish the class `HomographyPoseEstimator`.
+We will in this part follow [the slides from this week's lecture](https://www.uio.no/studier/emner/matnat/its/TEK5030/v24/lectures/09-single-view-geometry/01_pose-estimating-from-a-single-image.pdf) to finish the class `HomographyPoseEstimator`.
 
 You will find `HomographyPoseEstimator` in [lab_pose_estimation.py](../lab_pose_estimation.py)
 Read through the code to get an overview. 
