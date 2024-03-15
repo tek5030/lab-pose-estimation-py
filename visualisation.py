@@ -25,10 +25,9 @@ class Scene3D:
 
         point_bottom_left = [-half_width, -half_height, 0.]
         point_bottom_right = [half_width, -half_height, 0.]
-        point_top_left = [-half_width, half_height, 0.]
         point_top_right = [half_width, half_height, 0.]
 
-        rectangle = pv.Rectangle([point_bottom_left, point_bottom_right, point_top_right, point_top_left])
+        rectangle = pv.Rectangle([point_bottom_left, point_bottom_right, point_top_right])
         rectangle.texture_map_to_plane(inplace=True)
 
         image_rgb = world_model.world_image[:, :, ::-1].copy()
@@ -72,7 +71,7 @@ class ArRenderer:
 
         # Set up plotter.
         # Set hide_rendering=False to show a window with the 3D rendering.
-        theme = pv.themes.DefaultTheme()
+        theme = pv.themes.Theme()
         theme.transparent_background = True
         self._plotter = pv.Plotter(theme=theme, off_screen=hide_rendering)
 
@@ -163,7 +162,7 @@ def add_frustum(plotter, pose_w_c, camera_model, image, scale=0.1):
     pyramid = pv.Pyramid([point_bottom_left, point_bottom_right, point_top_left, point_top_right, point_focal])
     pyramid.transform(S)
 
-    rectangle = pv.Rectangle([point_bottom_left, point_bottom_right, point_top_left, point_top_right])
+    rectangle = pv.Rectangle([point_bottom_left, point_bottom_right, point_top_left])
     rectangle.texture_map_to_plane(inplace=True)
     rectangle.transform(S)
 

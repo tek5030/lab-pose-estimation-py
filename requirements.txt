@@ -1,6 +1,6 @@
-https://github.com/tussedrotten/pylie/archive/v0.4.1.zip
-numpy
-opencv-python
-pyvista
-pytest
-scipy
+pylie @ https://github.com/tussedrotten/pylie/archive/v1.0.1.zip#sha256=1d289e798a1f38fa52761784f8ef3794800394e65cc68cd93b34270b00f65647
+numpy==1.26.4
+opencv-python==4.9.0.80
+pyvista==0.43.4
+pytest==8.1.1
+scipy==1.12.0
